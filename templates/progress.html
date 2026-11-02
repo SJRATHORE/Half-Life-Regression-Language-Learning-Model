@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Progress · Farsi HLR{% endblock %}
+
+{% block head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Progress</h1>
+  <p class="page-sub">Half-life growth, recall trends, and category breakdown</p>
+</div>
+
+<div id="loading-charts" class="loading-state">Loading analytics…</div>
+
+<!-- Charts grid -->
+<div class="charts-grid hidden" id="charts-grid">
+
+  <!-- Recall over time -->
+  <div class="chart-card wide">
+    <div class="chart-title">Daily Recall Rate (%)</div>
+    <canvas id="recallChart" height="80"></canvas>
+  </div>
+
+  <!-- Half-life distribution -->
+  <div class="chart-card">
+    <div class="chart-title">Half-Life Distribution (days)</div>
+    <canvas id="hlChart" height="160"></canvas>
+  </div>
+
+  <!-- Words seen per day (cumulative) -->
+  <div class="chart-card">
+    <div class="chart-title">Unique Words Encountered</div>
+    <canvas id="wordsChart" height="160"></canvas>
+  </div>
+
+  <!-- Category breakdown -->
+  <div class="chart-card wide">
+    <div class="chart-title">Category Breakdown</div>
+    <div id="category-table"></div>
+  </div>
+
+</div><!-- .charts-grid -->
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/progress.js') }}"></script>
+{% endblock %}

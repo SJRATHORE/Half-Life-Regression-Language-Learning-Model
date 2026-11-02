@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Farsi HLR{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
+
+{% block content %}
+
+{% if message %}
+<div class="alert success">{{ message }}</div>
+{% endif %}
+
+<!-- ── Dev toolbar — press ` to toggle ── -->
+<div class="dev-toolbar" id="dev-toolbar" style="display:none">
+  <span class="dev-label">🛠 Dev</span>
+  <span class="dev-sep">⏩ Warp:</span>
+  <button class="dev-btn" onclick="warp(1)">+1 day</button>
+  <button class="dev-btn" onclick="warp(3)">+3 days</button>
+  <button class="dev-btn" onclick="warp(7)">+1 week</button>
+  <button class="dev-btn" onclick="warp(30)">+30 days</button>
+  <span class="dev-warp-status" id="warp-status"></span>
+  <span class="dev-sep" style="margin-left:auto"></span>
+  <a href="/study?force=mcq"       class="dev-btn">⚡ Force MCQ</a>
+  <a href="/study?force=flashcard" class="dev-btn">🃏 Force Flashcard</a>
+  <a href="/study?force=typing"    class="dev-btn">✍️ Force Typing</a>
+</div>
+
+<!-- Floating title over the rug -->
+<div class="dash-title-block">
+  <h1 class="dash-main-title">یادگیری فارسی</h1>
+  <p class="dash-sub">Learning Farsi with Half-Life Regression</p>
+</div>
+
+<!-- Glass stat cards -->
+<div class="stat-grid">
+  <div class="stat-card gold">
+    <div class="stat-value">{{ stats.streak }}</div>
+    <div class="stat-label">Day Streak 🔥</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.seen }}</div>
+    <div class="stat-label">Words Seen</div>
+    <div class="stat-sub">of {{ stats.total }}</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-value">{{ stats.due }}</div>
+    <div class="stat-label">Due for Review</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ stats.avg_recall }}%</div>
+    <div class="stat-label">Avg Recall</div>
+    <div class="stat-sub">last 200 reviews</div>
+  </div>
+</div>
+
+<!-- Progress bar -->
+<div class="section glass-section">
+  <div class="progress-header">
+    <span>Vocabulary Progress</span>
+    <span>{{ stats.seen }} / {{ stats.total }} words</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" style="width: {{ (stats.seen / stats.total * 100)|round(1) }}%"></div>
+  </div>
+  <div class="progress-pct">{{ (stats.seen / stats.total * 100)|round(1) }}% unlocked</div>
+</div>
+
+<!-- CTA -->
+<div class="cta-area">
+  {% if stats.due > 0 %}
+  <a href="{{ url_for('study') }}" class="btn btn-primary btn-large">
+    Start Review Session
+    <span class="btn-badge">{{ stats.due }} due</span>
+  </a>
+  {% elif stats.unseen > 0 %}
+  <a href="{{ url_for('study') }}" class="btn btn-primary btn-large">
+    Learn New Words
+    <span class="btn-badge">{{ stats.unseen }} new</span>
+  </a>
+  {% else %}
+  <div class="all-done">
+    <div class="all-done-icon">✓</div>
+    <div>All caught up! Check back later.</div>
+  </div>
+  {% endif %}
+  <a href="{{ url_for('progress') }}" class="btn btn-secondary btn-glass">View Progress →</a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+/* ── Backtick toggles dev toolbar ── */
+document.addEventListener('keydown', e => {
+  if (e.key === '`') {
+    const tb = document.getElementById('dev-toolbar');
+    tb.style.display = tb.style.display === 'none' ? 'flex' : 'none';
+  }
+});
+
+/* ── Time warp: POST to /dev/warp, then refresh page so stats update ── */
+async function warp(days) {
+  const status = document.getElementById('warp-status');
+  status.textContent = '⏳ warping…';
+  status.style.color = 'var(--muted)';
+  try {
+    const res  = await fetch('/dev/warp', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ days })
+    });
+    const data = await res.json();
+    status.textContent = `✓ +${days}d — ${data.now_due} due, ${data.reviews_aged} reviews aged`;
+    status.style.color = 'var(--correct)';
+    /* Reload after short delay so the stat cards reflect the new due count */
+    setTimeout(() => window.location.reload(), 900);
+  } catch(e) {
+    status.textContent = '✗ warp failed';
+    status.style.color = 'var(--incorrect)';
+  }
+}
+</script>
+{% endblock %}

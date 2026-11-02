@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Results · Farsi HLR{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Session Results</h1>
+  <p class="page-sub">
+    {{ correct }} / {{ total }} correct ·
+    {{ ((correct / total) * 100) | round(0) | int }}% recall rate
+  </p>
+</div>
+
+<!-- Score ring -->
+<div class="score-ring-wrap">
+  <svg class="score-ring" viewBox="0 0 120 120">
+    <circle cx="60" cy="60" r="50" class="ring-bg"/>
+    <circle cx="60" cy="60" r="50" class="ring-fill"
+            style="stroke-dasharray: {{ ((correct/total)*314) | round(1) }} 314;"/>
+  </svg>
+  <div class="score-ring-text">{{ ((correct/total)*100)|round(0)|int }}%</div>
+</div>
+
+<!-- Per-word breakdown -->
+<div class="results-table-wrap">
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Farsi</th>
+        <th>Transliteration</th>
+        <th>English</th>
+        <th>Type</th>
+        <th>Result</th>
+        <th title="Estimated half-life (days)">ĥ (days)</th>
+        <th>Next review</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for r in results %}
+      <tr class="{{ 'row-correct' if r.was_correct else 'row-incorrect' }}">
+        <td class="num-cell">{{ loop.index }}</td>
+        <td class="farsi-cell">{{ r.farsi }}</td>
+        <td class="translit-cell">{{ r.transliteration }}</td>
+        <td>{{ r.english }}</td>
+        <td><span class="type-label">{{ r.get('q_type','—') }}</span></td>
+        <td class="result-cell">
+          {% if r.was_correct %}
+            <span class="badge correct">✓</span>
+          {% else %}
+            <span class="badge incorrect">✗</span>
+          {% endif %}
+        </td>
+        <td>{{ r.h_hat }}</td>
+        <td>
+          {% if r.review_in_days < 1 %}
+            {{ (r.review_in_days * 24) | round(1) }} hrs
+          {% elif r.review_in_days < 2 %}
+            Tomorrow
+          {% else %}
+            {{ r.review_in_days | round(0) | int }} days
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="cta-area">
+  <a href="{{ url_for('study') }}"    class="btn btn-primary">Another Session</a>
+  <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Dashboard</a>
+  <a href="{{ url_for('progress') }}"  class="btn btn-secondary">View Progress</a>
+</div>
+{% endblock %}

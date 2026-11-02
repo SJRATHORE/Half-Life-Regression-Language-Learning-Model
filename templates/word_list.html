@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Words · Farsi HLR{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">All 200 Words</h1>
+  <p class="page-sub">Sorted by category · colour-coded by half-life</p>
+</div>
+
+<!-- Filter controls -->
+<div class="filter-bar">
+  <input  type="text" id="search-input" placeholder="Search Farsi, English, or transliteration…" class="filter-input"/>
+  <select id="cat-filter" class="filter-select">
+    <option value="">All categories</option>
+    {% set cats = words | map(attribute='category') | unique | sort %}
+    {% for cat in cats %}
+    <option value="{{ cat }}">{{ cat }}</option>
+    {% endfor %}
+  </select>
+  <select id="status-filter" class="filter-select">
+    <option value="">All words</option>
+    <option value="seen">Seen</option>
+    <option value="unseen">Not yet seen</option>
+  </select>
+</div>
+
+<!-- Legend -->
+<div class="hl-legend">
+  <span class="hl-pip pip-unseen"></span> Not seen &nbsp;&nbsp;
+  <span class="hl-pip pip-short"></span>  &lt;1 day &nbsp;&nbsp;
+  <span class="hl-pip pip-mid"></span>    1–7 days &nbsp;&nbsp;
+  <span class="hl-pip pip-long"></span>   7+ days
+</div>
+
+<div class="table-wrap">
+  <table class="word-table" id="word-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Farsi</th>
+        <th>Transliteration</th>
+        <th>English</th>
+        <th>Category</th>
+        <th>Seen</th>
+        <th>Correct</th>
+        <th title="Estimated half-life (days)">ĥ</th>
+        <th>Next review</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for w in words %}
+      {% set pct = (w.n_correct / w.n_seen * 100) if w.n_seen > 0 else 0 %}
+      {% if w.n_seen == 0 %}
+        {% set hl_class = 'hl-unseen' %}
+      {% elif w.half_life_est < 1 %}
+        {% set hl_class = 'hl-short' %}
+      {% elif w.half_life_est < 7 %}
+        {% set hl_class = 'hl-mid' %}
+      {% else %}
+        {% set hl_class = 'hl-long' %}
+      {% endif %}
+      <tr class="word-row {{ hl_class }}"
+          data-farsi="{{ w.farsi }}"
+          data-english="{{ w.english }}"
+          data-translit="{{ w.transliteration }}"
+          data-category="{{ w.category }}"
+          data-status="{{ 'seen' if w.n_seen > 0 else 'unseen' }}">
+        <td class="num-cell">{{ loop.index }}</td>
+        <td class="farsi-cell">{{ w.farsi }}</td>
+        <td class="translit-cell">{{ w.transliteration }}</td>
+        <td>{{ w.english }}</td>
+        <td><span class="cat-badge cat-{{ w.category|lower }}">{{ w.category }}</span></td>
+        <td>{{ w.n_seen }}</td>
+        <td>
+          {% if w.n_seen > 0 %}
+            {{ w.n_correct }}/{{ w.n_seen }}
+            <span class="pct-cell">({{ pct|round(0)|int }}%)</span>
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>
+          {% if w.n_seen > 0 %}
+            {{ w.half_life_est|round(1) }}d
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td class="next-cell">
+          {% if w.n_seen == 0 %}
+            New
+          {% elif w.next_review_ts <= (now | default(0)) %}
+            <span class="due-now">Due now</span>
+          {% else %}
+            {% set days = ((w.next_review_ts - (now | default(0))) / 86400)|round(0)|int %}
+            {% if days < 1 %}Soon{% elif days == 1 %}Tomorrow{% else %}{{ days }}d{% endif %}
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="row-count" id="row-count">Showing {{ words|length }} words</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const NOW_TS = {{ (now | default(0)) }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+/* Word-list filter logic */
+const searchInput  = document.getElementById('search-input');
+const catFilter    = document.getElementById('cat-filter');
+const statusFilter = document.getElementById('status-filter');
+const rows         = document.querySelectorAll('.word-row');
+const rowCount     = document.getElementById('row-count');
+
+function filterTable() {
+  const q   = searchInput.value.toLowerCase();
+  const cat = catFilter.value;
+  const st  = statusFilter.value;
+  let vis   = 0;
+  rows.forEach(r => {
+    const matchQ  = !q  || r.dataset.farsi.includes(q)
+                        || r.dataset.english.toLowerCase().includes(q)
+                        || r.dataset.translit.toLowerCase().includes(q);
+    const matchC  = !cat || r.dataset.category === cat;
+    const matchSt = !st  || r.dataset.status === st;
+    const show = matchQ && matchC && matchSt;
+    r.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  rowCount.textContent = `Showing ${vis} words`;
+}
+
+searchInput.addEventListener('input',  filterTable);
+catFilter.addEventListener('change',   filterTable);
+statusFilter.addEventListener('change',filterTable);
+</script>
+{% endblock %}

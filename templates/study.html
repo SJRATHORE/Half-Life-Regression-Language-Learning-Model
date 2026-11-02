@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Study · Farsi HLR{% endblock %}
+
+{% block content %}
+
+<!-- ── Dev toolbar ── press ` (backtick) to toggle ── -->
+<div class="dev-toolbar" id="dev-toolbar" {% if not force_mode %}style="display:none"{% endif %}>
+  <span class="dev-label">🛠 Dev</span>
+
+  <!-- Question-type override -->
+  <span class="dev-sep">Mode:</span>
+  <a href="/study"                 class="dev-btn {% if not force_mode          %}active{% endif %}">🔀 Auto</a>
+  <a href="/study?force=mcq"       class="dev-btn {% if force_mode=='mcq'       %}active{% endif %}">⚡ MCQ</a>
+  <a href="/study?force=flashcard" class="dev-btn {% if force_mode=='flashcard' %}active{% endif %}">🃏 Flashcard</a>
+  <a href="/study?force=typing"    class="dev-btn {% if force_mode=='typing'    %}active{% endif %}">✍️ Typing</a>
+
+  <!-- Time warp -->
+  <span class="dev-sep">⏩ Warp:</span>
+  <button class="dev-btn" onclick="warp(1)">+1 day</button>
+  <button class="dev-btn" onclick="warp(3)">+3 days</button>
+  <button class="dev-btn" onclick="warp(7)">+1 week</button>
+  <button class="dev-btn" onclick="warp(30)">+30 days</button>
+  <span class="dev-warp-status" id="warp-status"></span>
+</div>
+
+<div id="study-root">
+  <div class="study-meta">
+    <div class="study-counter">
+      <span><span id="card-index">1</span> / <span id="card-total">?</span></span>
+      <span class="study-type-badge type-flashcard" id="type-badge">🃏 Flashcard</span>
+    </div>
+    <div class="study-bar-track">
+      <div class="study-bar-fill" id="study-bar"></div>
+    </div>
+  </div>
+
+  <div class="card-wrap">
+    <div id="card-inner" style="width:100%;max-width:600px;"></div>
+  </div>
+
+  <div class="session-done hidden" id="session-done">
+    <div class="session-done-inner">
+      <div class="done-icon">🌙</div>
+      <h2>Session Complete</h2>
+      <p>Submitting results…</p>
+      <div class="spinner"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const WORDS      = {{ words_json | safe }};
+  const ALL_WORDS  = {{ all_words_json | safe }};
+  const FORCE_MODE = "{{ force_mode }}";
+
+  /* ── Time warp ── */
+  async function warp(days) {
+    const status = document.getElementById('warp-status');
+    status.textContent = '⏳ warping…';
+    status.style.color = 'var(--muted)';
+    try {
+      const res  = await fetch('/dev/warp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days })
+      });
+      const data = await res.json();
+      status.textContent = `✓ +${days}d → ${data.now_due} words due`;
+      status.style.color = 'var(--correct)';
+    } catch(e) {
+      status.textContent = '✗ warp failed';
+      status.style.color = 'var(--incorrect)';
+    }
+  }
+
+  /* ── Backtick toggles toolbar ── */
+  document.addEventListener('keydown', e => {
+    if (e.key === '`') {
+      const tb = document.getElementById('dev-toolbar');
+      tb.style.display = tb.style.display === 'none' ? 'flex' : 'none';
+    }
+  });
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/study.js') }}"></script>
+{% endblock %}
